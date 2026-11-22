@@ -1,0 +1,11 @@
+{
+  "name": "julia-betancourt-portfolio-v2",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Portfolio website for Júlia Betancourt, minimal editorial version. Static site, no dependencies.",
+  "scripts": {
+    "build": "node src/build.js"
+  },
+  "engines": { "node": ">=20" }
+}
