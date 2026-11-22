@@ -4,7 +4,7 @@
 
 export default {
   // Set to false before publishing. Draft mode marks placeholders.
-  draft: true,
+  draft: false,
 
   name: 'Júlia Betancourt',
   initials: 'JB',

@@ -705,3 +705,10 @@ a.table__row:hover .table__title { text-decoration: underline; text-decoration-c
   .cv__section { margin-top: 48px; }
   .card { padding: 22px 20px; }
 }
+
+/* Projects not published yet: listed without a link, marked "Soon". */
+.soon { display: inline-block; font-size: var(--t-small); line-height: 1; padding: 3px 7px; border: 1px solid currentColor; border-radius: 999px; }
+.is-soon { cursor: default; }
+.work-list .table__row.is-soon .table__title { color: var(--mute); }
+.pcard.is-soon .pcard__title { color: var(--mute); }
+.tl__projects .is-soon { color: var(--mute); }

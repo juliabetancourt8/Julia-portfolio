@@ -21,6 +21,10 @@ const open = new Set();
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // Escapes text and marks [[placeholders]].
+// Outside draft mode a project with placeholders left gets no page yet: it shows in
+// the lists without a link, marked "Soon".
+const live = (p) => draft || p.ready;
+
 function t(s) {
   return esc(s).replace(/\[\[(.+?)\]\]/g, (_, inner) => {
     open.add(inner);
@@ -235,7 +239,7 @@ function timeline(path, endNote, projects, rel, label = '') {
             <p class="small tl__meta">${t(s.role)}</p>
             ${work.length ? '' : `<p class="small tl__learned">${t(s.learned)}</p>`}
             ${s.tag ? `<span class="tl__tag">${t(s.tag)}</span>` : ''}
-            ${work.length ? `<ul class="tl__projects">${work.map((p) => `<li><a href="${rel}work/${p.slug}/index.html">${esc(p.title)} <span aria-hidden="true">→</span></a></li>`).join('')}</ul>` : ''}
+            ${work.length ? `<ul class="tl__projects">${work.map((p) => live(p) ? `<li><a href="${rel}work/${p.slug}/index.html">${esc(p.title)} <span aria-hidden="true">→</span></a></li>` : `<li><span class="is-soon">${esc(p.title)} <span class="soon">Soon</span></span></li>`).join('')}</ul>` : ''}
             ${media}
             ${s.link ? `<a class="small tl__more" href="${rel}${esc(s.link)}">View project <span aria-hidden="true">→</span></a>` : ''}
           </div>
@@ -513,10 +517,10 @@ function project(site, p, index, next) {
   ${draft && p.approval ? `<p class="row small draft-note">Draft note · ${esc(p.approval)}</p>` : ''}
   ${p.showcase ? showcase(p.showcase, rel) : `<div class="row story__img story__img--full">${figure(p.cover, rel)}</div>`}
   ${p.story.map((item) => story(item, rel)).join('\n  ')}
-  <a class="row next" href="${rel}work/${next.slug}/index.html">
+  ${next && next !== p ? `<a class="row next" href="${rel}work/${next.slug}/index.html">
     <span class="small mute">Next project</span>
     <span class="display next__title">${esc(next.title)}</span>
-  </a>
+  </a>` : ''}
 </article>`;
 }
 
@@ -559,11 +563,14 @@ function workList(site, projects, rel) {
     ${projects
       .map((p, i) => {
         const img = p.preview || (p.cover && p.cover.src && !p.cover.sample ? p.cover.src : '');
-        return `<a class="table__row" role="listitem" href="${rel}work/${p.slug}/index.html"${img ? ` data-preview="${rel}${esc(img)}"` : ''}>
+        const inner = `
       <span class="small mute">${pad(i + 1)}</span>
       <span class="table__title">${esc(p.title)}</span>
-      <span class="small mute">${esc(tags(site, p))}</span>
-    </a>`;
+      <span class="small mute">${live(p) ? '' : '<span class="soon">Soon</span> · '}${esc(tags(site, p))}</span>
+    `;
+        return live(p)
+          ? `<a class="table__row" role="listitem" href="${rel}work/${p.slug}/index.html"${img ? ` data-preview="${rel}${esc(img)}"` : ''}>${inner}</a>`
+          : `<div class="table__row is-soon" role="listitem">${inner}</div>`;
       })
       .join('\n    ')}
   </div>
@@ -607,12 +614,13 @@ function projectsPage(site, projects) {
   const card = (p, i) => {
     const pic = p.card || (p.cover && p.cover.src && !p.cover.sample ? { src: p.cover.src } : null);
     const year = /\[\[/.test(p.year || '') ? '' : p.year;
-    return `<a class="pcard pcard--${CARD_SIZES[i % 4]}" href="../work/${p.slug}/index.html" data-tags="${p.categories.join(' ')}">
+    const tag = live(p) ? 'a' : 'div';
+    return `<${tag} class="pcard pcard--${CARD_SIZES[i % 4]}${live(p) ? '' : ' is-soon'}"${live(p) ? ` href="../work/${p.slug}/index.html"` : ''} data-tags="${p.categories.join(' ')}">
       <span class="pcard__media${pic && pic.cutout ? ' pcard__media--cutout' : ''}">${
         pic ? `<img src="../${esc(pic.src)}" alt="" loading="lazy">` : `<span class="pcard__empty">${pad(i + 1)}</span>`
       }</span>
-      <span class="pcard__meta"><span class="pcard__title">${esc(p.title)}</span><span class="small mute">${esc(tags(site, p))}${year ? ` · ${esc(year)}` : ''}</span></span>
-    </a>`;
+      <span class="pcard__meta"><span class="pcard__title">${esc(p.title)}</span><span class="small mute">${live(p) ? '' : '<span class="soon">Soon</span> · '}${esc(tags(site, p))}${year ? ` · ${esc(year)}` : ''}</span></span>
+    </${tag}>`;
   };
   return `
 <section class="xp">
@@ -666,6 +674,7 @@ async function build() {
   const dir = join(root, 'content/projects');
   const files = (await readdir(dir)).filter((f) => f.endsWith('.js') && !f.startsWith('_'));
   const projects = (await Promise.all(files.map((f) => load(join(dir, f))))).sort((a, b) => a.order - b.order);
+  for (const p of projects) p.ready = !/\[\[/.test(JSON.stringify(p));
   for (const p of projects)
     for (const tag of p.categories)
       if (!site.categories.some((c) => c.tag === tag)) throw new Error(`Project "${p.slug}" uses unknown category "${tag}"`);
@@ -685,15 +694,17 @@ async function build() {
   await write('contact/index.html', layout({ site, rel: '../', title: `Contact · ${site.name}`, description: "Let's talk.", page: 'contact', body: contactPage(site) }));
   await write('experience/index.html', layout({ site, rel: '../', title: `Experience · ${site.name}`, description: 'How I got here, and the projects I made along the way.', page: 'experience', body: experiencePage(site, projects) }));
   await write('about/index.html', layout({ site, rel: '../', title: `About · ${site.name}`, description: site.about.tagline, page: 'about', body: cvPage(site) }));
+  const pages = projects.filter(live);
   for (const [i, p] of projects.entries()) {
-    const next = projects[(i + 1) % projects.length];
+    if (!live(p)) continue;
+    const next = pages[(pages.indexOf(p) + 1) % pages.length];
     await write(
       `work/${p.slug}/index.html`,
       layout({ site, rel: '../../', title: `${p.title} · ${site.name}`, description: p.line, page: 'projects', body: project(site, p, i, next) }),
     );
   }
 
-  console.log(`Built ${projects.length + 3} pages into dist/`);
+  console.log(`Built ${pages.length + 5} pages into dist/${draft ? '' : ` (${projects.length - pages.length} projects marked Soon, not published yet)`}`);
   if (open.size) console.log(`\n${open.size} placeholders left to fill:\n  - ${[...open].join('\n  - ')}`);
 }
 
