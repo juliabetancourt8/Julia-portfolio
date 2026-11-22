@@ -23,8 +23,6 @@ export default {
     hello: "Hi, I'm Júlia!", // bold
     tagline: 'A designer by choice, an overthinker by nature.', // bold
     paragraphs: [
-      "I'm a product designer with a soft spot for packaging, branding and all the little details that make an idea come to life.",
-      "I like asking questions, exploring different directions and figuring out how to turn a good idea into something people can actually see, touch and connect with.",
       "This portfolio is a little collection of things I've worked on, things I've learned and ideas I've had way too much fun bringing to life.",
     ],
   },

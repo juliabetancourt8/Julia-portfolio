@@ -368,9 +368,9 @@ function home(site, projects) {
     <div class="about__intro">
       <p class="about__hello">${t(site.about.hello)}</p>
       <p class="about__tagline">${t(site.about.tagline)}</p>
-      <div class="about__more">
+      ${site.about.paragraphs.length > 1 ? `<div class="about__more">
         ${site.about.paragraphs.slice(0, -1).map((p) => `<p>${t(p)}</p>`).join('\n        ')}
-      </div>
+      </div>` : ''}
       <p class="about__aside">${t(site.about.paragraphs.at(-1))}<svg class="about__arrow" viewBox="0 0 40 60" aria-hidden="true" focusable="false"><path d="M8,4 C24,14 30,32 22,54 M22,54 L15,46 M22,54 L30,48"/></svg></p>
     </div>
   </div>
